@@ -38,7 +38,7 @@ If you'd like to include images of the videos and static ones to show how the pi
 [image2]: ./test_images_output/video2.png
 
 
-### 2. Identify potential shortcomings with your current pipeline
+### 2. Potential shortcomings with the pipeline
 
 
 One potential shortcoming would be what would happen when lot of light in the image, I did some kind of tricks to avoid but it can happend
@@ -48,7 +48,7 @@ Also I can have problems in the video with slow movement.
 
 
 
-### 3. Suggest possible improvements to your pipeline
+### 3. Possible improvements
 
 adjustment of the image light before using canny algorithm could be good.
 avoid all kind of restriction to the image also could be better solution.
