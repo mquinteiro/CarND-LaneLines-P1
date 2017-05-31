@@ -4,8 +4,8 @@ import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import sys
-#%matplotlib inline
-
+import os
+os.listdir("test_images/")
 
 import math
 
@@ -135,7 +135,7 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
         lastLeftLine=leftLine
         lastLeftSlope=slopeLine(leftLine)
         lastLeftInt= intersectionPoint(leftLine, [0, cutingLine, image.shape[1], cutingLine])[0]
-        if(validLeftSlopeCount<maxHistereis):
+        if(validLeftSlopeCount<maxHisteresys):
             validLeftSlopeCount+=1
 
     else:
@@ -150,7 +150,7 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
         lastRightLine = rightLine
         lastRightSlope = slopeLine(rightLine)
         lastRightInt = intersectionPoint(rightLine, [0, cutingLine, image.shape[1], cutingLine])[0]
-        if (validRightSlopeCount < maxHistereis):
+        if (validRightSlopeCount < maxHisteresys):
             validRightSlopeCount += 1
     else:
         rightFails += 1
@@ -192,7 +192,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap,linecutPo
     #lines = cv2.HoughLines(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     if(linecutPos>0):
-        draw_lines2(line_img, lines,cutingLine=linecutPos)
+        draw_lines2(line_img, lines,color=[0,0,255],cutingLine=linecutPos,thickness=4)
     else:
         draw_lines(line_img,lines)
 
@@ -233,7 +233,7 @@ def tracbarRersponse(x):
     pass
 
 
-# TODO: Build your pipeline that will draw lane lines on the test_images
+
 # then save them to the test_images directory.
 
 #reading in an image
@@ -245,8 +245,9 @@ def tracbarRersponse(x):
 
 #videoName="test_videos/solidWhiteRight.mp4"
 videoName="test_videos/challenge.mp4"
-
-lightLimit=182
+videoImages=True
+debug=0
+lightLimit=221
 maxSlope=24
 lthres=0
 mthres=255
@@ -259,71 +260,87 @@ leftFails=0
 rightFails=0
 validLeftSlopeCount=0
 validRightSlopeCount=0
-maxHistereis = 20
+maxHisteresys = 20
 lastLeftInt=0
 lastRightInt=2000
+hough_maxLen=180
 
-cap = cv2.VideoCapture(videoName)
-cv2.namedWindow("Canny", 1)
-cv2.namedWindow("Orig", 1)
-cv2.namedWindow("Lines1", 1)
-cv2.namedWindow("Lines2", 1)
-cv2.namedWindow("Final", 1)
-cv2.createTrackbar('lightLimit', 'Final', lightLimit, 255, tracbarRersponse)
-cv2.createTrackbar('slope', 'Final', maxSlope, 1000, tracbarRersponse)
-cv2.createTrackbar('lthres', 'Final', lthres, 255, tracbarRersponse)
-cv2.createTrackbar('mthres', 'Final', mthres, 255, tracbarRersponse)
-while(True):
-    if pause is not True:
-        ret, image =  cap.read()
-    if ret==False:
-        cap = cv2.VideoCapture(videoName)
-        leftFails=0
-        rightFails=0
-        frames=0
-        continue
-    frames +=1
-    uncolored = removeColors(image, lightLimit, lightLimit, 0)
-    #uncolored = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    lthres=cv2.getTrackbarPos('lthres', 'Final')
-    mthres = cv2.getTrackbarPos('mthres', 'Final')
-    lightLimit = cv2.getTrackbarPos('lightLimit', 'Final')
-    maxSlope = cv2.getTrackbarPos('slope', 'Final')
-    cv2.imshow("Orig", uncolored)
-    uncolored[0:300, :] = 0
-    #cv2.waitKey(0)
+imageFiles = os.listdir("test_images/")
+maxHisteresys=0
+for imageName in imageFiles:
+    image = cv2.imread('test_images/'+imageName)
+    uncolored = removeColors(image, lightLimit/3, lightLimit, lightLimit)
+    uncolored[0:int(image.shape[0]/2), :] = 0
     withCanny = cv2.Canny(uncolored, lthres, mthres)
-    uncolored[0:200,:]=0
-    cv2.imshow("Canny",withCanny)
-    #cv2.waitKey(0)
-    hough_image = hough_lines(withCanny,1,np.pi/180,25,10,190,501)
-    cv2.imshow("Lines2",hough_image)
-    #cv2.waitKey(0)
-#    hough_image2 = hough_lines(withCanny,1,np.pi/180,100,3,40)
-#    cv2.imshow("Lines1",hough_image2)
-    #cv2.waitKey(0)
+    hough_image = hough_lines(withCanny, 1,2*( np.pi / 180.0), 25, 10, hough_maxLen, int(image.shape[0]/5)*4)
     final = weighted_img(hough_image, image, 0.8, 1., 0.)
-    cv2.imshow("Final",final)
-    full_image = np.zeros((image.shape[0] * 2, image.shape[1] * 2, 3), np.uint8)
-    #uncolored.copyTo(full_image.submat(0,0,image.shape[0]-1,image.shape[1]-1))
-    full_image[0:image.shape[0],0:image.shape[1]]=uncolored
-    full_image[image.shape[0]:image.shape[0]+image.shape[0], 0:image.shape[1],0] = withCanny
-    full_image[0:image.shape[0], image.shape[1]:image.shape[1]+image.shape[1]] = hough_image
-    full_image[image.shape[0]:image.shape[0]+image.shape[0], image.shape[1]:image.shape[1] + image.shape[1]] = final
-    cv2.putText(full_image,"leftFails = "+ str(leftFails),(0,120),0,2,[255,0,0],3)
-    cv2.putText(full_image, "rightFails = " + str(rightFails), (0, 160), 0, 2, [255, 0, 0], 3)
-    cv2.putText(full_image, "leftHist = " + str(validLeftSlopeCount), (1000, 120), 0, 2, [255, 0, 0], 3)
-    cv2.putText(full_image, "rightHist = " + str(validRightSlopeCount), (1000, 160), 0, 2, [255, 0, 0], 3)
-    cv2.putText(full_image, "frames = " + str(frames), (0, 200), 0, 2, [255, 0, 0], 3)
-    cv2.imshow("Final", cv2.resize(full_image, (0,0), fx=0.5, fy=0.5) )
+    cv2.imwrite("test_images_output/"+imageName,final)
+
+maxHisteresys =10
+cap = cv2.VideoCapture(videoName)
+cv2.namedWindow("Final", 1)
+if debug:
+    cv2.createTrackbar('lightLimit', 'Final', lightLimit, 255, tracbarRersponse)
+    cv2.createTrackbar('slope', 'Final', maxSlope, 1000, tracbarRersponse)
+    cv2.createTrackbar('lthres', 'Final', lthres, 255, tracbarRersponse)
+    cv2.createTrackbar('mthres', 'Final', mthres, 255, tracbarRersponse)
+idx=0
+scrIdx=0
+while(True):
+    if videoImages is True:
+        if pause is not True:
+            ret, image =  cap.read()
+        if ret == False:
+            cap = cv2.VideoCapture(videoName)
+            leftFails = 0
+            rightFails = 0
+            frames = 0
+            continue
+    else:
+        image = cv2.imread('test_images/'+imageFiles[idx])
+
+    frames +=1
+    uncolored = removeColors(image, lightLimit/3, lightLimit, lightLimit)
+
+    uncolored[0:int(image.shape[0]/2), :] = 0
+
+    withCanny = cv2.Canny(uncolored, lthres, mthres)
+
+    hough_image = hough_lines(withCanny,1,np.pi/180,25,10,hough_maxLen,int(image.shape[0]/5)*4)
+    final = weighted_img(hough_image, image, 0.8, 1., 0.)
+
+    if debug:
+        lthres=cv2.getTrackbarPos('lthres', 'Final')
+        mthres = cv2.getTrackbarPos('mthres', 'Final')
+        lightLimit = cv2.getTrackbarPos('lightLimit', 'Final')
+        maxSlope = cv2.getTrackbarPos('slope', 'Final')
+
+        full_image = np.zeros((image.shape[0] * 2, image.shape[1] * 2, 3), np.uint8)
+        #uncolored.copyTo(full_image.submat(0,0,image.shape[0]-1,image.shape[1]-1))
+        full_image[0:image.shape[0],0:image.shape[1]]=uncolored
+        full_image[image.shape[0]:image.shape[0]+image.shape[0], 0:image.shape[1],0] = withCanny
+        full_image[0:image.shape[0], image.shape[1]:image.shape[1]+image.shape[1]] = hough_image
+        full_image[image.shape[0]:image.shape[0]+image.shape[0], image.shape[1]:image.shape[1] + image.shape[1]] = final
+        cv2.putText(full_image,"leftFails = "+ str(leftFails),(0,120),0,2,[255,0,0],3)
+        cv2.putText(full_image, "rightFails = " + str(rightFails), (0, 160), 0, 2, [255, 0, 0], 3)
+        cv2.putText(full_image, "leftHist = " + str(validLeftSlopeCount), (1000, 120), 0, 2, [255, 0, 0], 3)
+        cv2.putText(full_image, "rightHist = " + str(validRightSlopeCount), (1000, 160), 0, 2, [255, 0, 0], 3)
+        cv2.putText(full_image, "frames = " + str(frames), (0, 200), 0, 2, [255, 0, 0], 3)
+        cv2.imshow("Final", cv2.resize(full_image, (0,0), fx=0.5, fy=0.5) )
+    else:
+
+        cv2.imshow("Final", final)
 
     key =cv2.waitKey(1)
     if key>0 and chr(key)=='q':
         exit(0)
     if key>0 and chr(key)=='p':
         pause=True
+        idx+=1
     if key > 0 and chr(key) == 'c':
         pause=False
+    if key > 0 and chr(key) == 's':
+        scrIdx+=1
+        cv2.imwrite("test_images_output/video" + str(scrIdx) + ".png", final)
 
 
