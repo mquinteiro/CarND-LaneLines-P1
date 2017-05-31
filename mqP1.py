@@ -9,6 +9,8 @@ os.listdir("test_images/")
 
 import math
 
+
+#function to calculate the slope of lines
 def slopeLine(line):
     start = np.array([line[0], line[1]])
     end = np.array([line[2], line[3]])
@@ -17,6 +19,7 @@ def slopeLine(line):
         return sys.float_info.max
     return (start[1] - end[1]) / (start[0] - end[0])
 
+#function to calculate the intersection between two lines
 def intersectionPoint(line1, line2):
     s1 = np.array([line1[0],line1[1]])
     e1 = np.array([line1[2],line1[3]])
@@ -80,6 +83,7 @@ def region_of_interest(img, vertices):
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image
 def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
+    #global variables for memory proposes
     global leftFails
     global rightFails
     global maxSlope
@@ -91,6 +95,8 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
     global validLeftSlopeCount
     global lastLeftInt
     global lastRightInt
+
+    #we will pay attention to the lines that cross a line in the image
     cv2.line(img, (0, cutingLine), (image.shape[1], cutingLine), color, thickness)
     mid=image.shape[1]/2
     left=0
@@ -112,7 +118,7 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
             #Check if intersection is inside the line
             if(inter[1]>y1 and inter[1]>y2) or (inter[1]<y1 and inter[1]<y2):
                 continue
-            #now we take closser from right and closser from left
+            #now we take closser line from right and closser from left
             if (inter[0]>mid and inter[0]<right):
                 if abs(slope)<maxSlope/100:
                     continue
@@ -130,6 +136,9 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
 
                 left=inter[0]
                 leftLine=line[0]
+
+    #if we have found a image that fit all requirements we write it, if not we use the last information during
+    # maxHisteresys frames
     if leftLine is not None:
         cv2.line(img, (leftLine[0], leftLine[1]), (leftLine[2], leftLine[3]), color, thickness)
         lastLeftLine=leftLine
@@ -215,6 +224,9 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     """
     return cv2.addWeighted(initial_img, α, img, β, λ)
 
+
+#new function to limit the pixels of the image. It work fine but I dont know if it is a good idea,
+#could generate new edges.
 def removeColors(initial_img, red_threshold, green_threshold, blue_threshold):
     rgb_threshold = [red_threshold, green_threshold, blue_threshold]
     color_select = np.copy(image)
@@ -243,6 +255,8 @@ def tracbarRersponse(x):
 #print('This image is:', type(image), 'with dimensions:', image.shape)
 #cap = cv2.VideoCapture("test_videos/challenge.mp4")
 
+
+#configuration variables
 #videoName="test_videos/solidWhiteRight.mp4"
 videoName="test_videos/challenge.mp4"
 videoImages=True
@@ -265,6 +279,7 @@ lastLeftInt=0
 lastRightInt=2000
 hough_maxLen=180
 
+#creating statics images
 imageFiles = os.listdir("test_images/")
 maxHisteresys=0
 for imageName in imageFiles:
@@ -286,6 +301,8 @@ if debug:
     cv2.createTrackbar('mthres', 'Final', mthres, 255, tracbarRersponse)
 idx=0
 scrIdx=0
+#start with video processing (or debuging static images)
+
 while(True):
     if videoImages is True:
         if pause is not True:
@@ -300,6 +317,8 @@ while(True):
         image = cv2.imread('test_images/'+imageFiles[idx])
 
     frames +=1
+
+    #this is the algorithm cleaning images, do canny process and hought_lines, finale merge with original image
     uncolored = removeColors(image, lightLimit/3, lightLimit, lightLimit)
 
     uncolored[0:int(image.shape[0]/2), :] = 0
@@ -309,6 +328,7 @@ while(True):
     hough_image = hough_lines(withCanny,1,np.pi/180,25,10,hough_maxLen,int(image.shape[0]/5)*4)
     final = weighted_img(hough_image, image, 0.8, 1., 0.)
 
+    #show debug information
     if debug:
         lthres=cv2.getTrackbarPos('lthres', 'Final')
         mthres = cv2.getTrackbarPos('mthres', 'Final')
@@ -331,6 +351,8 @@ while(True):
 
         cv2.imshow("Final", final)
 
+
+    #keyboard shortcuts.
     key =cv2.waitKey(1)
     if key>0 and chr(key)=='q':
         exit(0)
