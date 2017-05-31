@@ -35,7 +35,20 @@ absorving up tu N errors in the slope and position of the lines.
 
 If you'd like to include images of the videos and static ones to show how the pipeline works, 
 
-[image2]:(test_images_output/video2.png)
+![Image5]solidWhiteCurve.jpg
+![Video2](test_images_output/video2.png)
+![Video5](test_images_output/video5.png)
+
+More screen shoots are available at test_images_output
+
+For debugin porposes I have added a debug variable that change the interface in order to tune some parameters. 
+
+The application respond to de keyboard:
+
+q -> quit
+p -> pause video
+s -> screenshoot
+c -> continue
 
 
 ### 2. Potential shortcomings with the pipeline
