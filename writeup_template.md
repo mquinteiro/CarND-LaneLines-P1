@@ -35,7 +35,7 @@ absorving up tu N errors in the slope and position of the lines.
 
 If you'd like to include images of the videos and static ones to show how the pipeline works, 
 
-[image2]: ./test_images_output/video2.png
+[image2]:(test_images_output/video2.png)
 
 
 ### 2. Potential shortcomings with the pipeline
