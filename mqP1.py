@@ -258,7 +258,8 @@ def doImageProcess(image):
 
     # merge it with original image to obtain the final result.
     final = weighted_img(hough_image, image, 0.8, 1., 0.)
-    cv2.polylines(final,[roi],1,[0,255,0])
+    if debug==1:
+        cv2.polylines(final,[roi],1,[0,255,0])
     return final, bluredImage, maskedImage, withCanny, cropedImage, hough_image
 
 
