@@ -82,6 +82,7 @@ def drawConsolidateLine(img, lines, color=[0, 255, 0]):
     b = img.shape[0] - 1 - x0 * s
     x1 = (minY - b) / s
     cv2.line(img, (int(x0), img.shape[0] - 1), (int(x1), minY), color, 8)
+    [int(x0), img.shape[0] - 1, int(x1), minY]
 
 
 def region_of_interest(img, vertices):
@@ -109,7 +110,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
+def draw_lines(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
     # global variables for memory proposes
     global leftFails
     global rightFails
@@ -126,10 +127,6 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
     # we will pay attention to the lines that cross a line in the image
     # cv2.line(img, (0, cutingLine), (image.shape[1], cutingLine), color, thickness)
     mid = image.shape[1] / 2
-    left = 0
-    right = image.shape[1]
-    rightLine = None
-    leftLine = None
     left_lines = []
     right_lines = []
     if lines is None:
@@ -141,8 +138,8 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
             if abs(slope) < maxSlope / 100:
                 continue
             # cv2.line(img, (x1, y1), (x2, y2), [0, 255, 0], 1)
-            if (y1 < cutingLine and y2 < cutingLine):
-                continue
+            #if (y1 < cutingLine and y2 < cutingLine):
+            #    continue
             inter = intersectionPoint(line[0], [0, image.shape[0], image.shape[1], image.shape[0]])
             # inter = intersectionPoint(line[0], [0, cutingLine, image.shape[1], cutingLine])
             if (inter == False):
@@ -154,82 +151,36 @@ def draw_lines2(img, lines, color=[255, 0, 0], cutingLine=450, thickness=2):
             else:
                 #cv2.line(img, (x1, y1), (x2, y2), [0, 255, 255], 1)
                 right_lines.append(line)
-            # Check if intersection is inside the line
-            if (inter[1] > y1 and inter[1] > y2) or (inter[1] < y1 and inter[1] < y2):
-                continue
-            # now we take closser line from right and closser from left
-            if (inter[0] > mid and inter[0] < right):
-                # right
-                if validRightSlopeCount and (lastRightSlope / slope < 0.92 or lastRightSlope / slope > 1.08 or abs(
-                            lastRightInt - inter[0]) > 15):
-                    continue
-                right = inter[0]
-                rightLine = line[0]
-            if (inter[0] < mid and inter[0] > left):
-                # left
-                if abs(slope) < maxSlope / 100:
-                    continue
-                if validLeftSlopeCount and ((lastLeftSlope / slope < 0.92) or lastLeftSlope / slope > 1.08 or abs(
-                            lastLeftInt - inter[0]) > 15):
-                    continue
-                left = inter[0]
-                leftLine = line[0]
-    if len(left_lines):
-        slope, bias = drawConsolidateLine(img, left_lines, [0, 255, 0])
-    if len(right_lines):
-        drawConsolidateLine(img, right_lines, [0, 0, 255])
+
     # if we have found a image that fit all requirements we write it, if not we use the last information during
     # maxHisteresys frames
-    if leftLine is not None:
-        cv2.line(img, (leftLine[0], leftLine[1]), (leftLine[2], leftLine[3]), color, thickness)
-        lastLeftLine = leftLine
-        lastLeftSlope = slopeLine(leftLine)
-        lastLeftInt = intersectionPoint(leftLine, [0, cutingLine, image.shape[1], cutingLine])[0]
+
+    if len(left_lines):
+        lastLeftLine = drawConsolidateLine(img, left_lines, [0, 0, 255])
         if (validLeftSlopeCount < maxHisteresys):
             validLeftSlopeCount += 1
-
     else:
+        #if we have no lane lines use old ones
         leftFails += 1
+        # if validLeftSlopeCount is 0 the line is too old, descarted and marc as failure
         if (validLeftSlopeCount > 0):
             leftFails -= 1
             validLeftSlopeCount -= 1
-            cv2.line(img, (lastLeftLine[0], lastLeftLine[1]), (lastLeftLine[2], lastLeftLine[3]), color, thickness)
+            cv2.line(img, (lastLeftLine[0], lastLeftLine[1]), (lastLeftLine[2], lastLeftLine[3]), [255, 255, 0], 6)
 
-    if rightLine is not None:
-        cv2.line(img, (rightLine[0], rightLine[1]), (rightLine[2], rightLine[3]), color, thickness)
-        lastRightLine = rightLine
-        lastRightSlope = slopeLine(rightLine)
-        lastRightInt = intersectionPoint(rightLine, [0, cutingLine, image.shape[1], cutingLine])[0]
+    if len(right_lines):
+        lastRightLine = drawConsolidateLine(img, right_lines, [0, 255,0 ])
         if (validRightSlopeCount < maxHisteresys):
             validRightSlopeCount += 1
     else:
+        # if we have no lane lines use old ones
         rightFails += 1
+        # if validLeftSlopeCount is 0 the line is too old, descarted and marc as failure
         if (validRightSlopeCount > 0):
             rightFails -= 1
             validRightSlopeCount -= 1
-            cv2.line(img, (lastRightLine[0], lastRightLine[1]), (lastRightLine[2], lastRightLine[3]), color, thickness)
+            cv2.line(img, (lastRightLine[0], lastRightLine[1]), (lastRightLine[2], lastRightLine[3]), [255, 255, 0], 6)
 
-
-def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
-    """
-    NOTE: this is the function you might want to use as a starting point once you want to
-    average/extrapolate the line segments you detect to map out the full
-    extent of the lane (going from the result shown in raw-lines-example.mp4
-    to that shown in P1_example.mp4).
-
-    Think about things like separating line segments by their
-    slope ((y2-y1)/(x2-x1)) to decide which segments are part of the left
-    line vs. the right line.  Then, you can average the position of each of
-    the lines and extrapolate to the top and bottom of the lane.
-
-    This function draws `lines` with `color` and `thickness`.
-    Lines are drawn on the image inplace (mutates the image).
-    If you want to make the lines semi-transparent, think about combining
-    this function with the weighted_img() function below
-    """
-    for line in lines:
-        for x1, y1, x2, y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
 
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, linecutPos=0):
@@ -242,10 +193,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, linecutP
                             maxLineGap=max_line_gap)
     # lines = cv2.HoughLines(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
-    if (linecutPos > 0):
-        draw_lines2(line_img, lines, color=[0, 0, 255], cutingLine=linecutPos, thickness=4)
-    else:
-        draw_lines(line_img, lines)
+    draw_lines(line_img, lines, color=[0, 0, 255], cutingLine=linecutPos, thickness=4)
 
     return line_img
 
@@ -301,7 +249,7 @@ def doImageProcess(image):
 
     # reduce area of interest to a triangle
     roi = np.array([[40, withCanny.shape[0]], [withCanny.shape[1] - 40, withCanny.shape[0]],
-                    [withCanny.shape[1] / 2, withCanny.shape[0] / 2 + 56]], np.int32)
+                    [withCanny.shape[1] / 2, withCanny.shape[0] / 2 + withCanny.shape[0] /20]], np.int32)
     cropedImage = region_of_interest(withCanny, [roi])
 
     # finally convert the canny result to hough space and represent the lines in the output.
@@ -310,6 +258,7 @@ def doImageProcess(image):
 
     # merge it with original image to obtain the final result.
     final = weighted_img(hough_image, image, 0.8, 1., 0.)
+    cv2.polylines(final,[roi],1,[0,255,0])
     return final, bluredImage, maskedImage, withCanny, cropedImage, hough_image
 
 
@@ -323,7 +272,8 @@ def maskHSVYellowAndWhite(orig_img):
     # get yellow mask
     maskY = cv2.inRange(hsv, np.array([22 - 3, 125 - 20, 180 - 70]), np.array([22 + 3, 125 + 90, 180 + 70]))
     # get withe mask
-    maskW = cv2.inRange(hsv, np.array([midH - 10, midS - 30, midV - 25]), np.array([midH + 10, midS + 16, midV + 25]))
+    #maskW = cv2.inRange(hsv, np.array([midH - 10, midS - 30, midV - 25]), np.array([midH + 10, midS + 16, midV + 25]))
+    maskW = cv2.inRange(hsv, np.array([0, midS - 30, midV - 25]), np.array([176, midS + 16, midV + 25]))
 
     # to join both mask I have to do an OR between them,
     # finally make a BRG image with 255 in all dots yellow or white
@@ -400,7 +350,8 @@ def refreshDebugWindow(image1, image2, image3, image4):
 # videoName="test_videos/solidWhiteRight.mp4"
 videoName = "test_videos/challenge.mp4"
 videoImages = True
-debug = 1
+#videoImages = False
+debug = 0
 lightLimit = 221
 maxSlope = 24
 lthres = 0
@@ -420,7 +371,7 @@ lastRightInt = 2000
 midH = 23
 midS = 18
 midV = 230
-thr = 10
+thr = 19
 hough_max_length = 150
 hough_min_length = 10
 
